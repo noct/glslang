@@ -1318,19 +1318,6 @@ public:
         return false;
     }
 
-    virtual bool containsSpecializationSize() const
-    {
-        if (isArray() && arraySizes->containsNode())
-            return true;
-        if (! structure)
-            return false;
-        for (unsigned int i = 0; i < structure->size(); ++i) {
-            if ((*structure)[i].type->containsSpecializationSize())
-                return true;
-        }
-        return false;
-    }
-
     // Array editing methods.  Array descriptors can be shared across
     // type instances.  This allows all uses of the same array
     // to be updated at once.  E.g., all nodes can be explicitly sized

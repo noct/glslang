@@ -166,18 +166,6 @@ Id Builder::makeIntegerType(int width, bool hasSign)
     constantsTypesGlobals.push_back(std::unique_ptr<Instruction>(type));
     module.mapInstruction(type);
 
-    // deal with capabilities
-    switch (width) {
-    case 16:
-        addCapability(CapabilityInt16);
-        break;
-    case 64:
-        addCapability(CapabilityInt64);
-        break;
-    default:
-        break;
-    }
-
     return type->getResultId();
 }
 
@@ -197,18 +185,6 @@ Id Builder::makeFloatType(int width)
     groupedTypes[OpTypeFloat].push_back(type);
     constantsTypesGlobals.push_back(std::unique_ptr<Instruction>(type));
     module.mapInstruction(type);
-
-    // deal with capabilities
-    switch (width) {
-    case 16:
-        addCapability(CapabilityFloat16);
-        break;
-    case 64:
-        addCapability(CapabilityFloat64);
-        break;
-    default:
-        break;
-    }
 
     return type->getResultId();
 }
@@ -405,48 +381,6 @@ Id Builder::makeImageType(Id sampledType, Dim dim, bool depth, bool arrayed, boo
     constantsTypesGlobals.push_back(std::unique_ptr<Instruction>(type));
     module.mapInstruction(type);
 
-    // deal with capabilities
-    switch (dim) {
-    case DimBuffer:
-        if (sampled)
-            addCapability(CapabilitySampledBuffer);
-        else
-            addCapability(CapabilityImageBuffer);
-        break;
-    case Dim1D:
-        if (sampled)
-            addCapability(CapabilitySampled1D);
-        else
-            addCapability(CapabilityImage1D);
-        break;
-    case DimCube:
-        if (arrayed) {
-            if (sampled)
-                addCapability(CapabilitySampledCubeArray);
-            else
-                addCapability(CapabilityImageCubeArray);
-        }
-        break;
-    case DimRect:
-        if (sampled)
-            addCapability(CapabilitySampledRect);
-        else
-            addCapability(CapabilityImageRect);
-        break;
-    case DimSubpassData:
-        addCapability(CapabilityInputAttachment);
-        break;
-    default:
-        break;
-    }
-
-    if (ms) {
-        if (arrayed)
-            addCapability(CapabilityImageMSArray);
-        if (! sampled)
-            addCapability(CapabilityStorageImageMultisample);
-    }
-
     return type->getResultId();
 }
 
@@ -517,12 +451,8 @@ int Builder::getNumTypeConstituents(Id typeId) const
         return 1;
     case OpTypeVector:
     case OpTypeMatrix:
-        return instr->getImmediateOperand(1);
     case OpTypeArray:
-    {
-        Id lengthId = instr->getImmediateOperand(1);
-        return module.getInstruction(lengthId)->getImmediateOperand(0);
-    }
+        return instr->getImmediateOperand(1);
     case OpTypeStruct:
         return instr->getNumOperands();
     default:
@@ -650,19 +580,16 @@ Id Builder::makeBoolConstant(bool b, bool specConstant)
     Instruction* constant;
     Op opcode = specConstant ? (b ? OpSpecConstantTrue : OpSpecConstantFalse) : (b ? OpConstantTrue : OpConstantFalse);
 
-    // See if we already made it. Applies only to regular constants, because specialization constants
-    // must remain distinct for the purpose of applying a SpecId decoration.
-    if (! specConstant) {
-        Id existing = 0;
-        for (int i = 0; i < (int)groupedConstants[OpTypeBool].size(); ++i) {
-            constant = groupedConstants[OpTypeBool][i];
-            if (constant->getTypeId() == typeId && constant->getOpCode() == opcode)
-                existing = constant->getResultId();
-        }
-
-        if (existing)
-            return existing;
+    // See if we already made it
+    Id existing = 0;
+    for (int i = 0; i < (int)groupedConstants[OpTypeBool].size(); ++i) {
+        constant = groupedConstants[OpTypeBool][i];
+        if (constant->getTypeId() == typeId && constant->getOpCode() == opcode)
+            existing = constant->getResultId();
     }
+
+    if (existing)
+        return existing;
 
     // Make it
     Instruction* c = new Instruction(getUniqueId(), typeId, opcode);
@@ -676,14 +603,9 @@ Id Builder::makeBoolConstant(bool b, bool specConstant)
 Id Builder::makeIntConstant(Id typeId, unsigned value, bool specConstant)
 {
     Op opcode = specConstant ? OpSpecConstant : OpConstant;
-
-    // See if we already made it. Applies only to regular constants, because specialization constants
-    // must remain distinct for the purpose of applying a SpecId decoration.
-    if (! specConstant) {
-        Id existing = findScalarConstant(OpTypeInt, opcode, typeId, value);
-        if (existing)
-            return existing;
-    }
+    Id existing = findScalarConstant(OpTypeInt, opcode, typeId, value);
+    if (existing)
+        return existing;
 
     Instruction* c = new Instruction(getUniqueId(), typeId, opcode);
     c->addImmediateOperand(value);
@@ -699,14 +621,9 @@ Id Builder::makeFloatConstant(float f, bool specConstant)
     Op opcode = specConstant ? OpSpecConstant : OpConstant;
     Id typeId = makeFloatType(32);
     unsigned value = *(unsigned int*)&f;
-
-    // See if we already made it. Applies only to regular constants, because specialization constants
-    // must remain distinct for the purpose of applying a SpecId decoration.
-    if (! specConstant) {
-        Id existing = findScalarConstant(OpTypeFloat, opcode, typeId, value);
-        if (existing)
-            return existing;
-    }
+    Id existing = findScalarConstant(OpTypeFloat, opcode, typeId, value);
+    if (existing)
+        return existing;
 
     Instruction* c = new Instruction(getUniqueId(), typeId, opcode);
     c->addImmediateOperand(value);
@@ -724,14 +641,9 @@ Id Builder::makeDoubleConstant(double d, bool specConstant)
     unsigned long long value = *(unsigned long long*)&d;
     unsigned op1 = value & 0xFFFFFFFF;
     unsigned op2 = value >> 32;
-
-    // See if we already made it. Applies only to regular constants, because specialization constants
-    // must remain distinct for the purpose of applying a SpecId decoration.
-    if (! specConstant) {
-        Id existing = findScalarConstant(OpTypeFloat, opcode, typeId, op1, op2);
-        if (existing)
-            return existing;
-    }
+    Id existing = findScalarConstant(OpTypeFloat, opcode, typeId, op1, op2);
+    if (existing)
+        return existing;
 
     Instruction* c = new Instruction(getUniqueId(), typeId, opcode);
     c->addImmediateOperand(op1);
@@ -772,9 +684,8 @@ Id Builder::findCompositeConstant(Op typeClass, std::vector<Id>& comps) const
 }
 
 // Comments in header
-Id Builder::makeCompositeConstant(Id typeId, std::vector<Id>& members, bool specConstant)
+Id Builder::makeCompositeConstant(Id typeId, std::vector<Id>& members)
 {
-    Op opcode = specConstant ? OpSpecConstantComposite : OpConstantComposite;
     assert(typeId);
     Op typeClass = getTypeClass(typeId);
 
@@ -789,13 +700,11 @@ Id Builder::makeCompositeConstant(Id typeId, std::vector<Id>& members, bool spec
         return makeFloatConstant(0.0);
     }
 
-    if (! specConstant) {
-        Id existing = findCompositeConstant(typeClass, members);
-        if (existing)
-            return existing;
-    }
+    Id existing = findCompositeConstant(typeClass, members);
+    if (existing)
+        return existing;
 
-    Instruction* c = new Instruction(getUniqueId(), typeId, opcode);
+    Instruction* c = new Instruction(getUniqueId(), typeId, OpConstantComposite);
     for (int op = 0; op < (int)members.size(); ++op)
         c->addIdOperand(members[op]);
     constantsTypesGlobals.push_back(std::unique_ptr<Instruction>(c));
@@ -1310,7 +1219,7 @@ Id Builder::createBuiltinCall(Id resultType, Id builtins, int entryPoint, std::v
 
 // Accept all parameters needed to create a texture instruction.
 // Create the correct instruction based on the inputs, and make the call.
-Id Builder::createTextureCall(Decoration precision, Id resultType, bool sparse, bool fetch, bool proj, bool gather, bool noImplicitLod, const TextureParameters& parameters)
+Id Builder::createTextureCall(Decoration precision, Id resultType, bool sparse, bool fetch, bool proj, bool gather, const TextureParameters& parameters)
 {
     static const int maxTextureArgs = 10;
     Id texArgs[maxTextureArgs] = {};
@@ -1319,7 +1228,7 @@ Id Builder::createTextureCall(Decoration precision, Id resultType, bool sparse, 
     // Set up the fixed arguments
     //
     int numArgs = 0;
-    bool explicitLod = false;
+    bool xplicit = false;
     texArgs[numArgs++] = parameters.sampler;
     texArgs[numArgs++] = parameters.coords;
     if (parameters.Dref)
@@ -1340,18 +1249,13 @@ Id Builder::createTextureCall(Decoration precision, Id resultType, bool sparse, 
     if (parameters.lod) {
         mask = (ImageOperandsMask)(mask | ImageOperandsLodMask);
         texArgs[numArgs++] = parameters.lod;
-        explicitLod = true;
-    } else if (parameters.gradX) {
+        xplicit = true;
+    }
+    if (parameters.gradX) {
         mask = (ImageOperandsMask)(mask | ImageOperandsGradMask);
         texArgs[numArgs++] = parameters.gradX;
         texArgs[numArgs++] = parameters.gradY;
-        explicitLod = true;
-    } else if (noImplicitLod && ! fetch && ! gather) {
-        // have to explicitly use lod of 0 if not allowed to have them be implicit, and
-        // we would otherwise be about to issue an implicit instruction
-        mask = (ImageOperandsMask)(mask | ImageOperandsLodMask);
-        texArgs[numArgs++] = makeFloatConstant(0.0);
-        explicitLod = true;
+        xplicit = true;
     }
     if (parameters.offset) {
         if (isConstant(parameters.offset))
@@ -1369,9 +1273,6 @@ Id Builder::createTextureCall(Decoration precision, Id resultType, bool sparse, 
         texArgs[numArgs++] = parameters.sample;
     }
     if (parameters.lodClamp) {
-        // capability if this bit is used
-        addCapability(CapabilityMinLod);
-
         mask = (ImageOperandsMask)(mask | ImageOperandsMinLodMask);
         texArgs[numArgs++] = parameters.lodClamp;
     }
@@ -1383,7 +1284,8 @@ Id Builder::createTextureCall(Decoration precision, Id resultType, bool sparse, 
     //
     // Set up the instruction
     //
-    Op opCode = OpNop;  // All paths below need to set this
+    Op opCode;
+    opCode = OpImageSampleImplicitLod;
     if (fetch) {
         if (sparse)
             opCode = OpImageSparseFetch;
@@ -1400,7 +1302,7 @@ Id Builder::createTextureCall(Decoration precision, Id resultType, bool sparse, 
                 opCode = OpImageSparseGather;
             else
                 opCode = OpImageGather;
-    } else if (explicitLod) {
+    } else if (xplicit) {
         if (parameters.Dref) {
             if (proj)
                 if (sparse)
@@ -1490,9 +1392,6 @@ Id Builder::createTextureCall(Decoration precision, Id resultType, bool sparse, 
     Id resultId = textureInst->getResultId();
 
     if (sparse) {
-        // set capability
-        addCapability(CapabilitySparseResidency);
-
         // Decode the return type that was a special structure
         createStore(createCompositeExtract(resultId, typeId1, 1), parameters.texelOut);
         resultId = createCompositeExtract(resultId, typeId0, 0);
@@ -1510,9 +1409,6 @@ Id Builder::createTextureCall(Decoration precision, Id resultType, bool sparse, 
 // Comments in header
 Id Builder::createTextureQueryCall(Op opCode, const TextureParameters& parameters)
 {
-    // All these need a capability
-    addCapability(CapabilityImageQuery);
-
     // Figure out the result type
     Id resultType = 0;
     switch (opCode) {

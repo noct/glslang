@@ -93,7 +93,7 @@ struct TIoRange {
     int index;
 };
 
-// An offset range is a 2-D rectangle; the set of (binding, offset) pairs all lying
+// An IO range is a 2-D rectangle; the set of (binding, offset) pairs all lying
 // within the same binding and offset range.
 struct TOffsetRange {
     TOffsetRange(TRange binding, TRange offset)
@@ -267,7 +267,6 @@ public:
         localSizeSpecId[dim] = id;
         return true;
     }
-    unsigned int getLocalSizeSpecId(int dim) const { return localSizeSpecId[dim]; }
 
     void setXfbMode() { xfbMode = true; }
     bool getXfbMode() const { return xfbMode; }
@@ -308,7 +307,6 @@ public:
 
     int addUsedLocation(const TQualifier&, const TType&, bool& typeCollision);
     int addUsedOffsets(int binding, int offset, int numOffsets);
-    bool addUsedConstantId(int id);
     int computeTypeLocationSize(const TType&) const;
 
     bool setXfbBufferStride(int buffer, unsigned stride)
@@ -369,7 +367,6 @@ protected:
     std::vector<TIoRange> usedIo[4];        // sets of used locations, one for each of in, out, uniform, and buffers
     std::vector<TOffsetRange> usedAtomics;  // sets of bindings used by atomic counters
     std::vector<TXfbBuffer> xfbBuffers;     // all the data we need to track per xfb buffer
-    std::unordered_set<int> usedConstantId; // specialization constant ids used
 
 private:
     void operator=(TIntermediate&); // prevent assignments

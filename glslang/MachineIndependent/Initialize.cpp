@@ -2099,7 +2099,7 @@ void TBuiltIns::initialize(int version, EProfile profile, int spv, int vulkan)
 // Helper function for initialize(), to add the second set of names for texturing, 
 // when adding context-independent built-in functions.
 //
-void TBuiltIns::add2ndGenerationSamplingImaging(int version, EProfile profile, int /*spv*/, int vulkan)
+void TBuiltIns::add2ndGenerationSamplingImaging(int version, EProfile profile, int spv, int vulkan)
 {
     //
     // In this function proper, enumerate the types, then calls the next set of functions
@@ -2377,7 +2377,7 @@ void TBuiltIns::addImageFunctions(TSampler sampler, TString& typeName, int versi
 //
 // Add all the subpass access functions for the given type.
 //
-void TBuiltIns::addSubpassSampling(TSampler sampler, TString& typeName, int /*version*/, EProfile /*profile*/)
+void TBuiltIns::addSubpassSampling(TSampler sampler, TString& typeName, int version, EProfile profile)
 {
     stageBuiltins[EShLangFragment].append(prefixes[sampler.type]);
     stageBuiltins[EShLangFragment].append("vec4 subpassLoad");
@@ -3889,7 +3889,7 @@ void IdentifyBuiltIns(int version, EProfile profile, int spv, int vulkan, EShLan
 // 2) Tag extension-related symbols added to their base version with their extensions, so
 //    that if an early version has the extension turned off, there is an error reported on use.
 //
-void IdentifyBuiltIns(int version, EProfile profile, int spv, int /*vulkan*/, EShLanguage language, TSymbolTable& symbolTable, const TBuiltInResource &resources)
+void IdentifyBuiltIns(int version, EProfile profile, int spv, int vulkan, EShLanguage language, TSymbolTable& symbolTable, const TBuiltInResource &resources)
 {
     if (profile != EEsProfile && version >= 430 && version < 440) {
         symbolTable.setVariableExtensions("gl_MaxTransformFeedbackBuffers", 1, &E_GL_ARB_enhanced_layouts);

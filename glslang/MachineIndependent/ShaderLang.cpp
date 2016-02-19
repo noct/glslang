@@ -566,8 +566,6 @@ bool ProcessDeferred(
     intermediate.setVersion(version);
     intermediate.setProfile(profile);
     intermediate.setSpv(spv);
-    if (vulkan)
-        intermediate.setOriginUpperLeft();
     SetupBuiltinSymbolTable(version, profile, spv, vulkan);
     
     TSymbolTable* cachedTable = SharedSymbolTables[MapVersionToIndex(version)]

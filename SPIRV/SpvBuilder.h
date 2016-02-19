@@ -125,7 +125,6 @@ public:
     Id getContainedTypeId(Id typeId) const;
     Id getContainedTypeId(Id typeId, int) const;
     StorageClass getTypeStorageClass(Id typeId) const { return module.getStorageClass(typeId); }
-    ImageFormat getImageTypeFormat(Id typeId) const { return (ImageFormat)module.getInstruction(typeId)->getImmediateOperand(6); }
 
     bool isPointer(Id resultId)      const { return isPointerType(getTypeId(resultId)); }
     bool isScalar(Id resultId)       const { return isScalarType(getTypeId(resultId)); }
@@ -190,7 +189,7 @@ public:
     Id makeDoubleConstant(double d, bool specConstant = false);
 
     // Turn the array of constants into a proper spv constant of the requested type.
-    Id makeCompositeConstant(Id type, std::vector<Id>& comps, bool specConst = false);
+    Id makeCompositeConstant(Id type, std::vector<Id>& comps);
 
     // Methods for adding information outside the CFG.
     Instruction* addEntryPoint(ExecutionModel, Function*, const char* name);
@@ -324,7 +323,7 @@ public:
     };
 
     // Select the correct texture operation based on all inputs, and emit the correct instruction
-    Id createTextureCall(Decoration precision, Id resultType, bool sparse, bool fetch, bool proj, bool gather, bool noImplicit, const TextureParameters&);
+    Id createTextureCall(Decoration precision, Id resultType, bool sparse, bool fetch, bool proj, bool gather, const TextureParameters&);
 
     // Emit the OpTextureQuery* instruction that was passed in.
     // Figure out the right return value and type, and return it.
